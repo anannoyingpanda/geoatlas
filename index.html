@@ -124,11 +124,19 @@
         </div>
       </div>
 
-      <label class="field-label">Countries (comma separated, from library or new)</label>
-      <input type="text" id="fCountries" placeholder="China, United States" />
+      <label class="field-label">Countries</label>
+      <div id="fCountriesPicker" class="tag-picker"></div>
+      <div class="tag-add-row">
+        <input type="text" id="fCountriesNew" placeholder="Add a country not listed" />
+        <button type="button" id="fCountriesAddBtn" class="btn-ghost btn-small">Add</button>
+      </div>
 
-      <label class="field-label">Topics (comma separated)</label>
-      <input type="text" id="fTopics" placeholder="Export Control, Rare Earth, Supply Chain" />
+      <label class="field-label">Topics</label>
+      <div id="fTopicsPicker" class="tag-picker"></div>
+      <div class="tag-add-row">
+        <input type="text" id="fTopicsNew" placeholder="Add a topic not listed" />
+        <button type="button" id="fTopicsAddBtn" class="btn-ghost btn-small">Add</button>
+      </div>
 
       <label class="field-label">Summary</label>
       <textarea id="fSummary" rows="2" placeholder="What happened, in 1-2 sentences"></textarea>
