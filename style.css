@@ -199,6 +199,45 @@ textarea{resize:vertical;}
 .legend li{display:flex; align-items:center; gap:8px; font-size:12px; color:var(--text-dim);}
 .dot{width:9px; height:9px; border-radius:50%; flex-shrink:0;}
 
+/* Tag picker (countries / topics in the event form) */
+.tag-picker{
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px;
+  padding:9px;
+  background:var(--bg-panel-2);
+  border:1px solid var(--line);
+  border-radius:3px;
+  max-height:130px;
+  overflow-y:auto;
+}
+.chip{
+  padding:5px 11px;
+  border-radius:14px;
+  border:1px solid var(--line);
+  background:transparent;
+  color:var(--text-dim);
+  font-size:12px;
+  cursor:pointer;
+  white-space:nowrap;
+}
+.chip:hover{border-color:var(--accent-dim);}
+.chip.selected{
+  background:var(--accent);
+  border-color:var(--accent);
+  color:#1a1208;
+  font-weight:600;
+}
+.chip[disabled]{cursor:default; opacity:0.7;}
+.tag-add-row{
+  display:flex;
+  gap:6px;
+  margin-top:6px;
+}
+.tag-add-row input{flex:1;}
+.tag-add-row button{flex-shrink:0;}
+.empty-chip-note{font-size:11px; color:var(--text-dim); font-style:italic;}
+
 /* Multi-select checkbox list */
 .checkbox-list{
   max-height:170px;
