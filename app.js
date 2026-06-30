@@ -13,6 +13,8 @@ const STORAGE_KEY = "geoatlas_events_v1";
 // Change this before deploying if you want a different passphrase.
 const ADMIN_PASSWORD = "geoatlas";
 const ADMIN_SESSION_KEY = "geoatlas_admin_unlocked";
+const CUSTOM_COUNTRIES_KEY = "geoatlas_custom_countries";
+const CUSTOM_TOPICS_KEY = "geoatlas_custom_topics";
 
 let map;
 let markersLayer;
@@ -20,6 +22,33 @@ let events = [];
 let activeFilters = { countries: new Set(), topic: "", minSeverity: 0 };
 let pendingLatLng = null;
 let isAdmin = sessionStorage.getItem(ADMIN_SESSION_KEY) === "true";
+let customCountries = loadJsonArray(CUSTOM_COUNTRIES_KEY);
+let customTopics = loadJsonArray(CUSTOM_TOPICS_KEY);
+let formSelectedCountries = new Set();
+let formSelectedTopics = new Set();
+
+function loadJsonArray(key) {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+function getAllCountryNames() {
+  const set = new Set(COUNTRY_LIBRARY.map(c => c.name));
+  customCountries.forEach(c => set.add(c));
+  events.forEach(ev => (ev.countries || []).forEach(c => set.add(c)));
+  return [...set].sort();
+}
+
+function getAllTopicNames() {
+  const set = new Set(TOPIC_LIBRARY);
+  customTopics.forEach(t => set.add(t));
+  events.forEach(ev => (ev.topics || []).forEach(t => set.add(t)));
+  return [...set].sort();
+}
 
 init();
 
@@ -82,10 +111,8 @@ function buildLegend() {
 
 function buildFilterOptions() {
   const countryListEl = document.getElementById("countryFilterList");
-  const allCountries = new Set(COUNTRY_LIBRARY.map(c => c.name));
-  events.forEach(ev => (ev.countries || []).forEach(c => allCountries.add(c)));
 
-  countryListEl.innerHTML = [...allCountries].sort().map(name => {
+  countryListEl.innerHTML = getAllCountryNames().map(name => {
     const safeId = `cf-${name.replace(/[^a-zA-Z0-9]/g, "_")}`;
     const checked = activeFilters.countries.has(name) ? "checked" : "";
     return `
@@ -108,9 +135,7 @@ function buildFilterOptions() {
   updateCountrySelectedCount();
 
   const topicSel = document.getElementById("topicFilter");
-  const allTopics = new Set(TOPIC_LIBRARY);
-  events.forEach(ev => (ev.topics || []).forEach(t => allTopics.add(t)));
-  [...allTopics].sort().forEach(name => {
+  getAllTopicNames().forEach(name => {
     const opt = document.createElement("option");
     opt.value = name;
     opt.textContent = name;
@@ -129,6 +154,19 @@ function bindUI() {
     if (!isAdmin) { openAdminModal(); return; }
     pendingLatLng = null;
     openModal();
+  });
+
+  document.getElementById("fCountriesAddBtn").addEventListener("click", () => {
+    addCustomTag("country");
+  });
+  document.getElementById("fCountriesNew").addEventListener("keydown", e => {
+    if (e.key === "Enter") { e.preventDefault(); addCustomTag("country"); }
+  });
+  document.getElementById("fTopicsAddBtn").addEventListener("click", () => {
+    addCustomTag("topic");
+  });
+  document.getElementById("fTopicsNew").addEventListener("keydown", e => {
+    if (e.key === "Enter") { e.preventDefault(); addCustomTag("topic"); }
   });
 
   document.getElementById("topicFilter").addEventListener("change", e => {
@@ -308,6 +346,65 @@ function onAdminSubmit(e) {
   }
 }
 
+/* ---- Tag picker (countries / topics) ---- */
+
+function renderTagPicker(kind) {
+  const containerId = kind === "country" ? "fCountriesPicker" : "fTopicsPicker";
+  const selectedSet = kind === "country" ? formSelectedCountries : formSelectedTopics;
+  const options = kind === "country" ? getAllCountryNames() : getAllTopicNames();
+  const readOnly = !isAdmin;
+  const container = document.getElementById(containerId);
+
+  if (options.length === 0) {
+    container.innerHTML = `<span class="empty-chip-note">No options yet. Add one below.</span>`;
+    return;
+  }
+
+  container.innerHTML = options.map(name => {
+    const selected = selectedSet.has(name) ? "selected" : "";
+    const disabledAttr = readOnly ? "disabled" : "";
+    return `<button type="button" class="chip ${selected}" data-name="${escapeHtml(name)}" ${disabledAttr}>${escapeHtml(name)}</button>`;
+  }).join("");
+
+  if (!readOnly) {
+    container.querySelectorAll(".chip").forEach(chip => {
+      chip.addEventListener("click", () => {
+        const name = chip.dataset.name;
+        if (selectedSet.has(name)) selectedSet.delete(name);
+        else selectedSet.add(name);
+        renderTagPicker(kind);
+      });
+    });
+  }
+}
+
+function addCustomTag(kind) {
+  const inputId = kind === "country" ? "fCountriesNew" : "fTopicsNew";
+  const input = document.getElementById(inputId);
+  const value = input.value.trim();
+  if (!value) return;
+
+  const selectedSet = kind === "country" ? formSelectedCountries : formSelectedTopics;
+  const storageKey = kind === "country" ? CUSTOM_COUNTRIES_KEY : CUSTOM_TOPICS_KEY;
+  const list = kind === "country" ? customCountries : customTopics;
+
+  const existing = getAllCountryNamesOrTopics(kind).find(n => n.toLowerCase() === value.toLowerCase());
+  const finalValue = existing || value;
+
+  if (!existing) {
+    list.push(finalValue);
+    localStorage.setItem(storageKey, JSON.stringify(list));
+  }
+
+  selectedSet.add(finalValue);
+  input.value = "";
+  renderTagPicker(kind);
+}
+
+function getAllCountryNamesOrTopics(kind) {
+  return kind === "country" ? getAllCountryNames() : getAllTopicNames();
+}
+
 /* ---- Modal / form ---- */
 
 function openModal(ev = null) {
@@ -315,9 +412,21 @@ function openModal(ev = null) {
   form.reset();
 
   const readOnly = !isAdmin;
-  document.getElementById("deleteEvent").classList.toggle("hidden", !ev || readOnly);
+  const deleteBtn = document.getElementById("deleteEvent");
+  if (ev && !readOnly) deleteBtn.classList.remove("hidden");
+  else deleteBtn.classList.add("hidden");
+
   document.querySelector("#eventForm button[type=submit]").classList.toggle("hidden", readOnly);
   form.querySelectorAll("input, select, textarea").forEach(el => { el.disabled = readOnly; });
+  document.getElementById("fCountriesNew").disabled = readOnly;
+  document.getElementById("fCountriesAddBtn").disabled = readOnly;
+  document.getElementById("fTopicsNew").disabled = readOnly;
+  document.getElementById("fTopicsAddBtn").disabled = readOnly;
+
+  formSelectedCountries = new Set(ev ? (ev.countries || []) : []);
+  formSelectedTopics = new Set(ev ? (ev.topics || []) : []);
+  renderTagPicker("country");
+  renderTagPicker("topic");
 
   if (ev) {
     document.getElementById("modalTitle").textContent = readOnly ? "Event details" : "Edit event";
@@ -328,8 +437,6 @@ function openModal(ev = null) {
     document.getElementById("fDate").value = ev.date || "";
     document.getElementById("fSeverity").value = ev.severity ?? 2;
     document.getElementById("fLocation").value = ev.location || "";
-    document.getElementById("fCountries").value = (ev.countries || []).join(", ");
-    document.getElementById("fTopics").value = (ev.topics || []).join(", ");
     document.getElementById("fSummary").value = ev.summary || "";
     document.getElementById("fNotes").value = ev.notes || "";
     document.getElementById("fLinks").value = (ev.links || []).join(", ");
@@ -368,8 +475,8 @@ function onSaveEvent(e) {
     location: document.getElementById("fLocation").value.trim(),
     lat: lat,
     lng: lng,
-    countries: splitList(document.getElementById("fCountries").value),
-    topics: splitList(document.getElementById("fTopics").value),
+    countries: [...formSelectedCountries],
+    topics: [...formSelectedTopics],
     summary: document.getElementById("fSummary").value.trim(),
     notes: document.getElementById("fNotes").value.trim(),
     links: splitList(document.getElementById("fLinks").value)
