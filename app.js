@@ -110,27 +110,12 @@ function buildLegend() {
 }
 
 function buildFilterOptions() {
-  const countryListEl = document.getElementById("countryFilterList");
-
-  countryListEl.innerHTML = getAllCountryNames().map(name => {
-    const safeId = `cf-${name.replace(/[^a-zA-Z0-9]/g, "_")}`;
-    const checked = activeFilters.countries.has(name) ? "checked" : "";
-    return `
-      <div class="checkbox-row">
-        <input type="checkbox" id="${safeId}" value="${escapeHtml(name)}" ${checked} />
-        <label for="${safeId}">${escapeHtml(name)}</label>
-      </div>
-    `;
-  }).join("");
-
-  countryListEl.querySelectorAll('input[type=checkbox]').forEach(cb => {
-    cb.addEventListener("change", () => {
-      if (cb.checked) activeFilters.countries.add(cb.value);
-      else activeFilters.countries.delete(cb.value);
-      updateCountrySelectedCount();
-      render();
-    });
-  });
+  renderDropdownOptions("countryFilterList", getAllCountryNames(), activeFilters.countries, (name, checked) => {
+    if (checked) activeFilters.countries.add(name);
+    else activeFilters.countries.delete(name);
+    updateCountrySelectedCount();
+    render();
+  }, "");
 
   updateCountrySelectedCount();
 
@@ -145,8 +130,10 @@ function buildFilterOptions() {
 
 function updateCountrySelectedCount() {
   const badge = document.getElementById("countrySelectedCount");
+  const toggle = document.getElementById("countryFilterToggle");
   const n = activeFilters.countries.size;
   badge.textContent = n > 0 ? `${n} selected` : "";
+  toggle.textContent = n > 0 ? `${n} region${n > 1 ? "s" : ""} selected` : "All regions";
 }
 
 function bindUI() {
@@ -155,6 +142,24 @@ function bindUI() {
     pendingLatLng = null;
     openModal();
   });
+
+  setupDropdown("countryFilterToggle", "countryFilterPanel", "countryFilterSearch");
+  document.getElementById("countryFilterSearch").addEventListener("input", e => {
+    renderDropdownOptions("countryFilterList", getAllCountryNames(), activeFilters.countries, (name, checked) => {
+      if (checked) activeFilters.countries.add(name);
+      else activeFilters.countries.delete(name);
+      updateCountrySelectedCount();
+      render();
+    }, e.target.value);
+  });
+
+  setupDropdown("fCountriesToggle", "fCountriesPanel", "fCountriesSearch", () => renderTagPicker("country"));
+  document.getElementById("fCountriesSearch").addEventListener("input", e => renderTagPicker("country", e.target.value));
+
+  setupDropdown("fTopicsToggle", "fTopicsPanel", "fTopicsSearch", () => renderTagPicker("topic"));
+  document.getElementById("fTopicsSearch").addEventListener("input", e => renderTagPicker("topic", e.target.value));
+
+  document.addEventListener("click", closeAllDropdowns);
 
   document.getElementById("fCountriesAddBtn").addEventListener("click", () => {
     addCustomTag("country");
@@ -346,36 +351,83 @@ function onAdminSubmit(e) {
   }
 }
 
-/* ---- Tag picker (countries / topics) ---- */
+/* ---- Generic dropdown multi-select ---- */
 
-function renderTagPicker(kind) {
-  const containerId = kind === "country" ? "fCountriesPicker" : "fTopicsPicker";
-  const selectedSet = kind === "country" ? formSelectedCountries : formSelectedTopics;
-  const options = kind === "country" ? getAllCountryNames() : getAllTopicNames();
-  const readOnly = !isAdmin;
-  const container = document.getElementById(containerId);
+function renderDropdownOptions(listElId, options, selectedSet, onToggle, searchTerm, disabled = false) {
+  const container = document.getElementById(listElId);
+  const filtered = searchTerm
+    ? options.filter(name => name.toLowerCase().includes(searchTerm.toLowerCase()))
+    : options;
 
-  if (options.length === 0) {
-    container.innerHTML = `<span class="empty-chip-note">No options yet. Add one below.</span>`;
+  if (filtered.length === 0) {
+    container.innerHTML = `<p class="empty-chip-note">No matches.</p>`;
     return;
   }
 
-  container.innerHTML = options.map(name => {
-    const selected = selectedSet.has(name) ? "selected" : "";
-    const disabledAttr = readOnly ? "disabled" : "";
-    return `<button type="button" class="chip ${selected}" data-name="${escapeHtml(name)}" ${disabledAttr}>${escapeHtml(name)}</button>`;
+  container.innerHTML = filtered.map(name => {
+    const safeId = `${listElId}-${name.replace(/[^a-zA-Z0-9]/g, "_")}`;
+    const checked = selectedSet.has(name) ? "checked" : "";
+    const disabledAttr = disabled ? "disabled" : "";
+    return `
+      <div class="checkbox-row">
+        <input type="checkbox" id="${safeId}" value="${escapeHtml(name)}" ${checked} ${disabledAttr} />
+        <label for="${safeId}">${escapeHtml(name)}</label>
+      </div>
+    `;
   }).join("");
 
-  if (!readOnly) {
-    container.querySelectorAll(".chip").forEach(chip => {
-      chip.addEventListener("click", () => {
-        const name = chip.dataset.name;
-        if (selectedSet.has(name)) selectedSet.delete(name);
-        else selectedSet.add(name);
-        renderTagPicker(kind);
-      });
+  if (!disabled) {
+    container.querySelectorAll('input[type=checkbox]').forEach(cb => {
+      cb.addEventListener("change", () => onToggle(cb.value, cb.checked));
     });
   }
+}
+
+function setupDropdown(toggleId, panelId, searchId, onOpen) {
+  const toggle = document.getElementById(toggleId);
+  const panel = document.getElementById(panelId);
+
+  toggle.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const isOpen = !panel.classList.contains("hidden");
+    closeAllDropdowns();
+    if (!isOpen) {
+      panel.classList.remove("hidden");
+      if (onOpen) onOpen();
+      const search = document.getElementById(searchId);
+      if (search) { search.value = ""; search.focus(); }
+    }
+  });
+
+  panel.addEventListener("click", e => e.stopPropagation());
+}
+
+function closeAllDropdowns() {
+  document.querySelectorAll(".dropdown-panel").forEach(p => p.classList.add("hidden"));
+}
+
+/* ---- Region / topic picker (event form) ---- */
+
+function renderTagPicker(kind, searchTerm = "") {
+  const listId = kind === "country" ? "fCountriesPicker" : "fTopicsPicker";
+  const selectedSet = kind === "country" ? formSelectedCountries : formSelectedTopics;
+  const options = kind === "country" ? getAllCountryNames() : getAllTopicNames();
+  const readOnly = !isAdmin;
+
+  renderDropdownOptions(listId, options, selectedSet, (name, checked) => {
+    if (checked) selectedSet.add(name);
+    else selectedSet.delete(name);
+    updateFormToggleLabel(kind);
+  }, searchTerm, readOnly);
+}
+
+function updateFormToggleLabel(kind) {
+  const toggleId = kind === "country" ? "fCountriesToggle" : "fTopicsToggle";
+  const noun = kind === "country" ? "region" : "topic";
+  const selectedSet = kind === "country" ? formSelectedCountries : formSelectedTopics;
+  const toggle = document.getElementById(toggleId);
+  const n = selectedSet.size;
+  toggle.textContent = n > 0 ? `${n} ${noun}${n > 1 ? "s" : ""} selected` : `Select ${noun}s`;
 }
 
 function addCustomTag(kind) {
@@ -387,8 +439,9 @@ function addCustomTag(kind) {
   const selectedSet = kind === "country" ? formSelectedCountries : formSelectedTopics;
   const storageKey = kind === "country" ? CUSTOM_COUNTRIES_KEY : CUSTOM_TOPICS_KEY;
   const list = kind === "country" ? customCountries : customTopics;
+  const allOptions = kind === "country" ? getAllCountryNames() : getAllTopicNames();
 
-  const existing = getAllCountryNamesOrTopics(kind).find(n => n.toLowerCase() === value.toLowerCase());
+  const existing = allOptions.find(n => n.toLowerCase() === value.toLowerCase());
   const finalValue = existing || value;
 
   if (!existing) {
@@ -399,10 +452,7 @@ function addCustomTag(kind) {
   selectedSet.add(finalValue);
   input.value = "";
   renderTagPicker(kind);
-}
-
-function getAllCountryNamesOrTopics(kind) {
-  return kind === "country" ? getAllCountryNames() : getAllTopicNames();
+  updateFormToggleLabel(kind);
 }
 
 /* ---- Modal / form ---- */
@@ -422,11 +472,16 @@ function openModal(ev = null) {
   document.getElementById("fCountriesAddBtn").disabled = readOnly;
   document.getElementById("fTopicsNew").disabled = readOnly;
   document.getElementById("fTopicsAddBtn").disabled = readOnly;
+  document.getElementById("fCountriesToggle").disabled = readOnly;
+  document.getElementById("fTopicsToggle").disabled = readOnly;
 
   formSelectedCountries = new Set(ev ? (ev.countries || []) : []);
   formSelectedTopics = new Set(ev ? (ev.topics || []) : []);
   renderTagPicker("country");
   renderTagPicker("topic");
+  updateFormToggleLabel("country");
+  updateFormToggleLabel("topic");
+  closeAllDropdowns();
 
   if (ev) {
     document.getElementById("modalTitle").textContent = readOnly ? "Event details" : "Edit event";
