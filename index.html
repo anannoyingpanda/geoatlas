@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>GeoAtlas — Personal Geopolitical Knowledge Map</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<div id="app">
+
+  <header id="topbar">
+    <div class="brand">
+      <span class="brand-mark">G</span>
+      <div>
+        <h1>GeoAtlas</h1>
+        <p class="tagline">A personal geopolitical knowledge map</p>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <div class="stats" id="globalStats"></div>
+      <span id="modeBadge" class="mode-badge">Viewer mode</span>
+      <button id="adminToggle" class="btn-ghost btn-small">Unlock editing</button>
+    </div>
+  </header>
+
+  <div id="layout">
+
+    <aside id="sidebar">
+
+      <section class="panel">
+        <h2>Filters</h2>
+
+        <label class="field-label">Country</label>
+        <select id="countryFilter">
+          <option value="">All countries</option>
+        </select>
+
+        <label class="field-label">Topic</label>
+        <select id="topicFilter">
+          <option value="">All topics</option>
+        </select>
+
+        <label class="field-label">Minimum severity</label>
+        <select id="severityFilter">
+          <option value="0">All</option>
+          <option value="1">Low and above</option>
+          <option value="2">Medium and above</option>
+          <option value="3">High and above</option>
+          <option value="4">Critical only</option>
+        </select>
+
+        <button id="clearFilters" class="btn-ghost">Clear filters</button>
+      </section>
+
+      <section class="panel">
+        <h2>Severity legend</h2>
+        <ul id="legend" class="legend"></ul>
+      </section>
+
+      <section class="panel">
+        <h2>Events <span id="eventCount" class="count-badge">0</span></h2>
+        <div id="eventList" class="event-list"></div>
+      </section>
+
+    </aside>
+
+    <main id="mapWrap">
+      <div id="map"></div>
+      <div id="mapHint">Viewer mode. Unlock editing to add events.</div>
+    </main>
+
+  </div>
+</div>
+
+<!-- Event form modal -->
+<div id="modalOverlay" class="overlay hidden">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="modalTitle">New event</h2>
+      <button id="modalClose" class="btn-icon">&times;</button>
+    </div>
+
+    <form id="eventForm">
+      <input type="hidden" id="eventId" />
+      <input type="hidden" id="eventLat" />
+      <input type="hidden" id="eventLng" />
+
+      <label class="field-label">Title</label>
+      <input type="text" id="fTitle" required placeholder="e.g. Rare earth export control expansion" />
+
+      <div class="row2">
+        <div>
+          <label class="field-label">Date</label>
+          <input type="date" id="fDate" required />
+        </div>
+        <div>
+          <label class="field-label">Severity</label>
+          <select id="fSeverity">
+            <option value="0">Information</option>
+            <option value="1">Low</option>
+            <option value="2" selected>Medium</option>
+            <option value="3">High</option>
+            <option value="4">Critical</option>
+          </select>
+        </div>
+      </div>
+
+      <label class="field-label">Location name</label>
+      <input type="text" id="fLocation" placeholder="e.g. Beijing, Taiwan Strait, Suez Canal" />
+
+      <label class="field-label">Countries (comma separated, from library or new)</label>
+      <input type="text" id="fCountries" placeholder="China, United States" />
+
+      <label class="field-label">Topics (comma separated)</label>
+      <input type="text" id="fTopics" placeholder="Export Control, Rare Earth, Supply Chain" />
+
+      <label class="field-label">Summary</label>
+      <textarea id="fSummary" rows="2" placeholder="What happened, in 1-2 sentences"></textarea>
+
+      <label class="field-label">Why it matters / my analysis</label>
+      <textarea id="fNotes" rows="4" placeholder="Your own interpretation. This is the part that compounds in value over time."></textarea>
+
+      <label class="field-label">Links (comma separated URLs)</label>
+      <input type="text" id="fLinks" placeholder="https://..." />
+
+      <div class="modal-actions">
+        <button type="button" id="deleteEvent" class="btn-danger hidden">Delete</button>
+        <div class="spacer"></div>
+        <button type="button" id="cancelForm" class="btn-ghost">Cancel</button>
+        <button type="submit" class="btn-primary">Save event</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Admin unlock modal -->
+<div id="adminOverlay" class="overlay hidden">
+  <div class="modal modal-small">
+    <div class="modal-header">
+      <h2>Unlock editing</h2>
+      <button id="adminModalClose" class="btn-icon">&times;</button>
+    </div>
+    <form id="adminForm">
+      <label class="field-label">Passphrase</label>
+      <input type="password" id="adminPasswordInput" autocomplete="off" />
+      <p id="adminError" class="error-text hidden">Incorrect passphrase.</p>
+      <div class="modal-actions">
+        <div class="spacer"></div>
+        <button type="button" id="adminCancel" class="btn-ghost">Cancel</button>
+        <button type="submit" class="btn-primary">Unlock</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="countries.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
