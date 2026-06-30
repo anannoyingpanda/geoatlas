@@ -39,8 +39,14 @@
       <section class="panel">
         <h2>Filters</h2>
 
-        <label class="field-label">Countries <span id="countrySelectedCount" class="count-badge"></span></label>
-        <div id="countryFilterList" class="checkbox-list"></div>
+        <label class="field-label">Regions <span id="countrySelectedCount" class="count-badge"></span></label>
+        <div class="dropdown" id="countryFilterDropdown">
+          <button type="button" class="dropdown-toggle" id="countryFilterToggle">All regions</button>
+          <div class="dropdown-panel hidden" id="countryFilterPanel">
+            <input type="text" class="dropdown-search" id="countryFilterSearch" placeholder="Search regions..." />
+            <div class="dropdown-options" id="countryFilterList"></div>
+          </div>
+        </div>
 
         <label class="field-label">Topic</label>
         <select id="topicFilter">
@@ -124,18 +130,30 @@
         </div>
       </div>
 
-      <label class="field-label">Countries</label>
-      <div id="fCountriesPicker" class="tag-picker"></div>
-      <div class="tag-add-row">
-        <input type="text" id="fCountriesNew" placeholder="Add a country not listed" />
-        <button type="button" id="fCountriesAddBtn" class="btn-ghost btn-small">Add</button>
+      <label class="field-label">Regions</label>
+      <div class="dropdown" id="fCountriesDropdown">
+        <button type="button" class="dropdown-toggle" id="fCountriesToggle">Select regions</button>
+        <div class="dropdown-panel hidden" id="fCountriesPanel">
+          <input type="text" class="dropdown-search" id="fCountriesSearch" placeholder="Search regions..." />
+          <div class="dropdown-options" id="fCountriesPicker"></div>
+          <div class="dropdown-addrow">
+            <input type="text" id="fCountriesNew" placeholder="Add a region not listed" />
+            <button type="button" id="fCountriesAddBtn" class="btn-ghost btn-small">Add</button>
+          </div>
+        </div>
       </div>
 
       <label class="field-label">Topics</label>
-      <div id="fTopicsPicker" class="tag-picker"></div>
-      <div class="tag-add-row">
-        <input type="text" id="fTopicsNew" placeholder="Add a topic not listed" />
-        <button type="button" id="fTopicsAddBtn" class="btn-ghost btn-small">Add</button>
+      <div class="dropdown" id="fTopicsDropdown">
+        <button type="button" class="dropdown-toggle" id="fTopicsToggle">Select topics</button>
+        <div class="dropdown-panel hidden" id="fTopicsPanel">
+          <input type="text" class="dropdown-search" id="fTopicsSearch" placeholder="Search topics..." />
+          <div class="dropdown-options" id="fTopicsPicker"></div>
+          <div class="dropdown-addrow">
+            <input type="text" id="fTopicsNew" placeholder="Add a topic not listed" />
+            <button type="button" id="fTopicsAddBtn" class="btn-ghost btn-small">Add</button>
+          </div>
+        </div>
       </div>
 
       <label class="field-label">Summary</label>
